@@ -17,7 +17,6 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        // Validación
         $validator = Validator::make($request->all(), [
             'email' => 'required|email',
             'password' => 'required',
@@ -27,27 +26,17 @@ class AuthController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        // Intentar autenticación
         if (Auth::attempt([
             'email' => $request->email, 
             'password' => $request->password
         ], $request->filled('remember'))) {
             
             $request->session()->regenerate();
-            return redirect()->intended(route('agenda.calendar'));
-        }
-
-        // Si falla la autenticación, mostrar error específico
-        $user = User::where('email', $request->email)->first();
-        
-        if (!$user) {
-            return back()->withErrors([
-                'email' => 'No existe un usuario con este email.',
-            ])->withInput();
+            return redirect()->route('agenda.calendar');
         }
 
         return back()->withErrors([
-            'password' => 'La contraseña es incorrecta.',
+            'email' => 'Las credenciales no coinciden con nuestros registros.',
         ])->withInput();
     }
 
@@ -73,10 +62,9 @@ class AuthController extends Controller
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => Hash::make($request->password),
-                'email_verified_at' => now(), // Verificar email automáticamente
+                'email_verified_at' => now(),
             ]);
 
-            // Asignar rol de usuario por defecto
             $user->assignRole('user');
 
             Auth::login($user);

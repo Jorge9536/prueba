@@ -11,11 +11,16 @@ class RoleController extends Controller
 {
     public function __construct()
     {
-        $this->middleware(['auth', 'role:super-admin']);
+        $this->middleware('auth');
     }
 
     public function index()
     {
+        if (!auth()->user()->hasRole('super-admin')) {
+            return redirect()->route('agenda.calendar')
+                ->with('error', 'No tienes permisos para acceder a esta sección.');
+        }
+
         $roles = Role::with('permissions')->get();
         $permissions = Permission::all();
         return view('admin.roles.index', compact('roles', 'permissions'));
@@ -23,6 +28,10 @@ class RoleController extends Controller
 
     public function store(Request $request)
     {
+        if (!auth()->user()->hasRole('super-admin')) {
+            return back()->with('error', 'No tienes permisos para realizar esta acción.');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255|unique:roles,name',
             'permissions' => 'nullable|array',
@@ -44,10 +53,15 @@ class RoleController extends Controller
         }
     }
 
-    public function destroy(Role $role)
+    public function destroy($id)
     {
+        if (!auth()->user()->hasRole('super-admin')) {
+            return back()->with('error', 'No tienes permisos para realizar esta acción.');
+        }
+
         try {
-            // No permitir eliminar roles básicos
+            $role = Role::findOrFail($id);
+            
             if (in_array($role->name, ['super-admin', 'admin', 'user'])) {
                 return back()->with('error', 'No puedes eliminar este rol del sistema.');
             }

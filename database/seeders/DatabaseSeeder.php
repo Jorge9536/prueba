@@ -6,13 +6,35 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
 
 class DatabaseSeeder extends Seeder
 {
     public function run()
     {
-        // Primero crear los roles
-        $this->call(RoleSeeder::class);
+        // Limpiar cache de permisos
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // Crear permisos
+        $permissions = [
+            'manage users',
+            'manage events', 
+            'manage roles',
+            'create admin events'
+        ];
+
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
+        }
+
+        // Crear roles
+        $superAdminRole = Role::firstOrCreate(['name' => 'super-admin']);
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $userRole = Role::firstOrCreate(['name' => 'user']);
+
+        // Asignar permisos a roles
+        $superAdminRole->givePermissionTo(Permission::all());
+        $adminRole->givePermissionTo(['manage users', 'manage events', 'create admin events']);
 
         // Super Admin
         $superAdmin = User::create([
@@ -53,5 +75,6 @@ class DatabaseSeeder extends Seeder
         echo "Super Admin: superadmin@agenda.com / password\n";
         echo "Admin: admin@agenda.com / password\n";
         echo "Usuario: usuario1@agenda.com / password\n";
+        echo "Usuario: usuario2@agenda.com / password\n";
     }
 }

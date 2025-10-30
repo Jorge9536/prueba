@@ -132,26 +132,3 @@
         </div>
     </div>
 @stop
-
-@section('css')
-    <style>
-        .small-box {
-            border-radius: .25rem;
-            box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
-            display: block;
-            margin-bottom: 20px;
-            position: relative;
-        }
-        .info-box {
-            box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
-            border-radius: .25rem;
-            background: #fff;
-            display: -ms-flexbox;
-            display: flex;
-            margin-bottom: 1rem;
-            min-height: 80px;
-            padding: .5rem;
-            position: relative;
-        }
-    </style>
-@stop

@@ -6,6 +6,7 @@ use App\Models\Event;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Role;
 
 class EventController extends Controller
 {
@@ -268,6 +269,65 @@ class EventController extends Controller
 
         } catch (\Exception $e) {
             return back()->with('error', 'Error al crear el evento administrativo: ' . $e->getMessage());
+        }
+    }
+
+    // Sistema de alarmas
+    public function getUpcomingEvents()
+    {
+        $now = now();
+        $oneHourFromNow = now()->addHour();
+        
+        $events = Event::where('has_reminder', true)
+            ->where('start_date', '>', $now)
+            ->where('start_date', '<=', $oneHourFromNow)
+            ->where(function($query) {
+                $query->where('user_id', Auth::id())
+                      ->orWhere('is_admin_event', true)
+                      ->orWhere('visibility', 'public')
+                      ->orWhereHas('assignedUsers', function($q) {
+                          $q->where('user_id', Auth::id());
+                      });
+            })
+            ->with('user')
+            ->get()
+            ->map(function ($event) {
+                $minutesUntil = $event->start_date->diffInMinutes(now());
+                return [
+                    'id' => $event->id,
+                    'title' => $event->title,
+                    'start_date' => $event->start_date->toISOString(),
+                    'minutes_until' => $minutesUntil,
+                    'reminder_minutes' => $event->reminder_minutes,
+                    'is_reminder_time' => $minutesUntil <= $event->reminder_minutes,
+                    'notified' => false
+                ];
+            });
+
+        return response()->json($events);
+    }
+
+    // Métodos adicionales
+    public function toggleReminder(Request $request, Event $event)
+    {
+        if (!$event->isOwner(Auth::user()) && !Auth::user()->hasRole(['super-admin', 'admin'])) {
+            return response()->json(['error' => 'No tienes permisos para modificar este evento'], 403);
+        }
+
+        try {
+            $event->update([
+                'has_reminder' => !$event->has_reminder,
+                'reminder_minutes' => $request->reminder_minutes ?? $event->reminder_minutes
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'has_reminder' => $event->has_reminder,
+                'message' => $event->has_reminder ? 'Recordatorio activado' : 'Recordatorio desactivado'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error al actualizar el recordatorio'], 500);
         }
     }
 }
